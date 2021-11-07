@@ -7,6 +7,6 @@ class Era
     # @param day [Integer] 日(1〜31)
     # @return [String] 元号変換後の文字列 ex) "平成10年"
     def calc(year, month, day)
-        'hoge'
+        
     end
 end

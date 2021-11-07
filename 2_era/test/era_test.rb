@@ -12,6 +12,12 @@ class EraTest < Minitest::Test
        @era.calc(1920, 12, 25)
     }
   end
+  
+  def test_era_before_showa_edge
+    assert_raises(ArgumentError) {
+       @era.calc(1926, 12, 24)
+    }
+  end
 
   def test_era_showa_start
     assert_equal '昭和元年', @era.calc(1926, 12, 25)

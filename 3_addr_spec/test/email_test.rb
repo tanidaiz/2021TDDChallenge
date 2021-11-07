@@ -8,89 +8,65 @@ class ValidationTest < Minitest::Test
     @validation = Validation.new
   end
 
-  def stdin_string_io(string)
-    input = StringIO.new(string)
+  def entire(mail_address)
+    input = StringIO.new(mail_address)
     output = StringIO.new
-
     @validation.validate(input, output)
-
     return output.string
   end
 
-  def test_ex1
-    assert_equal "ok\n", stdin_string_io("abc@example.com\n")
-  end
-  
-  def test_ex2
-    assert_equal "ng\n", stdin_string_io("a..bc@example.com\n")
-  end
+  def test_entire
+    assert_equal "ok\n", entire("abc@example.com\n")
+    assert_equal "ng\n", entire("a..bc@example.com\n")
+    assert_equal "ok\n", entire("ABCabc@hoge.!#$%&'*+-/=?^_`{|}~.com\n")
+    assert_equal "ng\n", entire("abc@.example.com\n")
+    assert_equal "ng\n", entire("abc@com.\n")
+    assert_equal "ng\n", entire("abc@example..com\n")
+    assert_equal "ng\n", entire("abc@\n")
+    assert_equal "ok\n", entire("abc@d\n")
 
-  def test_d1
-    assert_equal "ok\n", stdin_string_io("ABCabc@hoge.!#$%&'*+-/=?^_`{|}~.com\n")
-  end
+    assert_equal "ng\n", entire("abc@@example.com\n")
 
-  def test_d2
-    assert_equal "ng\n", stdin_string_io("abc@.example.com")
-  end
-
-  def test_d3
-    assert_equal "ng\n", stdin_string_io("abc@com.")
-  end
-
-  def test_d4
-    assert_equal "ng\n", stdin_string_io("abc@example..com")
-  end
-
-  def test_d5
-    assert_equal "ng\n", stdin_string_io("abc@")
-    assert_equal "ok\n", stdin_string_io("abc@d")
-  end
-
-  def test_a1
-    assert_equal "ng\n", stdin_string_io("abc@@example.com")
-  end
-
-  def test_ld1
-    assert_equal "ok\n", stdin_string_io("hoge.!#$%&'*+-/=?^_`{|}~@example.com\n")
-  end
-
-  def test_ld2
-    assert_equal "ng\n", stdin_string_io(".hoge@example.com")
-  end
-  
-  def test_ld3
-    assert_equal "ng\n", stdin_string_io("hoge.@example.com")
-  end
-  
-  def test_ld4
-    assert_equal "ng\n", stdin_string_io("hoge..fuga@example.com")
-  end
-  
-  def test_ld5
-    assert_equal "ng\n", stdin_string_io("@example.com")
-  end
-
-  def test_lq1
-    assert_equal "ng\n", stdin_string_io('hoge"@example.com')
-  end
-
-  def test_lq2
-    assert_equal "ng\n", stdin_string_io('"hoge@example.com')
-  end
-
-  def test_lq3
+    assert_equal "ok\n", entire("hoge.!#$%&'*+-/=?^_`{|}~@example.com\n")
+    assert_equal "ng\n", entire(".hoge@example.com\n")
+    assert_equal "ng\n", entire("hoge.@example.com\n")
+    assert_equal "ng\n", entire("hoge..fuga@example.com\n")
+    assert_equal "ng\n", entire("@example.com\n")
+    assert_equal "ng\n", entire("hoge\"@example.com\n")
+    assert_equal "ng\n", entire("\"hoge@example.com\n")
     text = <<~EOF
-      "!#$%&'*+-/=?^_`{|}~(),.:;<>@[]"\"@example.com
+      \"!#$%&'*+-/=?^_`{|}~(),.:;<>@[]\"\\\"@example.com
     EOF
-    assert_equal "ok\n", stdin_string_io(text)
+    assert_equal "ok\n", entire(text)
+    assert_equal "ok\n", entire('""@example.com'+"\n")
+    assert_equal "ng\n", entire('"@example.com'+"\n")
+
   end
 
-  # def test_lq4
-  #   assert_equal "ng\n", stdin_string_io('@example.com')
-  # end
-
-  def test_lq5
-    assert_equal "ok\n", stdin_string_io('""@example.com')
-    assert_equal "ng\n", stdin_string_io('"@example.com')
+  def test_local
+    assert_equal true, @validation.validate_local("abc")
+    assert_equal true, @validation.validate_local("abc.!#$%&'*+-/=?^_`{|}~")
+    assert_equal false, @validation.validate_local(".hoge")
+    assert_equal false, @validation.validate_local("hoge.")
+    assert_equal false, @validation.validate_local("hoge..fuga")
+    assert_equal false, @validation.validate_local('hoge"')
+    assert_equal false, @validation.validate_local('"hoge')
+    text = <<~EOF.chomp
+      \"!#$%&'*+-/=?^_`{|}~(),.:;<>@[]\"\\\"
+    EOF
+    assert_equal true, @validation.validate_local(text)
+    assert_equal true, @validation.validate_local('""')
+    assert_equal false, @validation.validate_local('"')
   end
+
+  def test_domain
+    assert_equal true, @validation.validate_domain("example.com\n")
+    assert_equal true, @validation.validate_domain("hoge.!#$%&'*+-/=?^_`{|}~.com\n")
+    assert_equal false, @validation.validate_domain(".example.com")
+    assert_equal false, @validation.validate_domain("com.")
+    assert_equal false, @validation.validate_domain("example..com")
+    assert_equal false, @validation.validate_domain("")
+    assert_equal true, @validation.validate_domain("d")
+  end
+
 end
